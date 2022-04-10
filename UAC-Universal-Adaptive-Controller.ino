@@ -21,7 +21,7 @@
 #define DEVICE_CODE "NONONOOK" //RTC device code
 
 RF24 radio(CE, CSN);                         /* Creating instance 'radio'  ( CE , CSN )   CE -> D7 | CSN -> D8 */                              
-const byte readingPipeAddress[6] = "00001";  /* Address to which data to be received*/
+const byte writingPipeAddress[6] = "00001";  /* Address to which data to be received*/
 Packer                             packer;
 Chrono                             rfActivityChecker;
 DynamicJsonDocument                doc(64); //Document for decoding data from rf messages
@@ -30,7 +30,7 @@ int powerLeftSide =                0;
 int powerRightSide =               0;
 bool motorsWereUpdated =           true; //In case if motors values were changed
 
-void messageReceiveHandler(char arr[], int size);
+// void messageReceiveHandler(char arr[], int size);
 
 void setup () {
   Serial.begin(115200);
@@ -39,7 +39,7 @@ void setup () {
   // packer.onMessageReady(messageReceiveHandler);
 
   radio.begin();
-  // initializeRFForWriting();
+  initializeRFForWriting();
 
   //Pins mode defining and initializing
   pinMode(VRX_pin, INPUT_PULLUP);
@@ -62,13 +62,13 @@ void loop () {
   Serial.println(digitalRead(SW_pin));
   handleMove(1023-xValue, 1023-yValue);
   Serial.println("# - #");
-  delay(200);
+  delay(60);
 }
 
 
 void handleMove (int xAnalog, int yAnalog) {
-  double x = map(xAnalog, 0, 1023, -100, 100);
-  double y = map(yAnalog, 0, 1023, -100, 100);
+  double x = map(xAnalog, 0, 1023, -120, 120);
+  double y = map(yAnalog, 0, 1023, -120, 120);
   double powerL = x;
   double powerR = x;
 
@@ -83,4 +83,25 @@ void handleMove (int xAnalog, int yAnalog) {
   //Send data
   Serial.println(String("PowerL: ") + powerL);
   Serial.println(String("PowerR: ") + powerR);
+
+  StaticJsonDocument<600> doc;
+  doc["powerL"] = powerL;
+  doc["powerR"] = powerR;
+  doc["deviceCode"] = "xstWsRSC";
+
+  String serializedMessage;
+  
+  serializeJson(doc, serializedMessage);
+
+  int jsonLength = serializedMessage.length();
+  char text[jsonLength];
+
+  serializedMessage.toCharArray(text, jsonLength);
+
+  packsContainer pc = packer.generatePacks(text, sizeof(text));
+  for(int i = 0; i < pc.count; i++) {
+    builtPack built = packer.buildPack(pc.packs[i]);
+    radio.write(&built.body, built.size+1);    
+  }
+
 }
