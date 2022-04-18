@@ -68,13 +68,14 @@ void loop () {
 
 void handleMove (int xAnalog, int yAnalog) {
   double x = map(xAnalog, 0, 1023, -120, 120);
-  double y = map(yAnalog, 0, 1023, -120, 120);
+  double y = map(yAnalog, 0, 1023, 120, -120);
   double powerL = x;
   double powerR = x;
 
-  if(y > 20) powerR -= y*2 + 20;
-  if(y < 20) powerL -= y*2 + 20;
+  powerR += y;
+  powerL -= y;
   
+  // Check for correct values
   if(powerL >= 100) powerL = 100;
   if(powerR >= 100) powerR = 100;
   if(powerL <= -100) powerL = -100;
